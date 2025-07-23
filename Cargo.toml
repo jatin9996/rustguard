@@ -1,0 +1,10 @@
+[package]
+name = "rustguard-icap"
+version = "0.1.0"
+edition = "2024"
+
+
+[dependencies]
+zmq = "0.10"
+log = "0.4"
+env_logger = "0.10"
