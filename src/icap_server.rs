@@ -89,4 +89,19 @@ impl IcapServer {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::zmq_client::ZmqClient;
+
+    #[test]
+    fn test_icap_server_new() {
+        let zmq_client = ZmqClient::new("tcp://127.0.0.1:5555".to_string());
+        let server = IcapServer::new("0.0.0.0:1344".to_string(), zmq_client);
+        assert_eq!(server.listen_addr, "0.0.0.0:1344");
+    }
+
+
 } 

@@ -2,6 +2,22 @@
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+#[async_trait::async_trait]
+pub trait AsyncStream: Send + Sync {
+    async fn write_all(&mut self, buf: &[u8]) -> Result<(), std::io::Error>;
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error>;
+}
+
+#[async_trait::async_trait]
+impl AsyncStream for TcpStream {
+    async fn write_all(&mut self, buf: &[u8]) -> Result<(), std::io::Error> {
+        AsyncWriteExt::write_all(self, buf).await
+    }
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error> {
+        AsyncReadExt::read(self, buf).await
+    }
+}
+
 pub struct IcapClient {
   
     pub server_addr: String,
@@ -86,4 +102,36 @@ impl IcapClient {
         }
         Err("ICAP server response did not contain encapsulated HTTP message".to_string())
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockall::{mock, predicate::*};
+    use async_trait::async_trait;
+
+    mock! {
+        pub Stream {}
+        #[async_trait]
+        impl AsyncStream for Stream {
+            async fn write_all(&mut self, buf: &[u8]) -> Result<(), std::io::Error>;
+            async fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error>;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reqmod_success() {
+        let mut mock_stream = MockStream::new();
+        mock_stream.expect_write_all()
+            .returning(|_| Ok(()));
+        mock_stream.expect_read()
+            .returning(|buf| {
+                let response = b"ICAP/1.0 200 OK\r\n\r\nHTTP/1.1 200 OK\r\n\r\nbody";
+                buf[..response.len()].copy_from_slice(response);
+                Ok(response.len())
+            });
+
+    }
+
+  
 } 

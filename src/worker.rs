@@ -37,4 +37,20 @@ impl Worker {
             socket.send(reply, 0).unwrap();
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_worker_new() {
+        let worker = Worker::new("tcp://*:5555".to_string());
+        assert_eq!(worker.bind_addr, "tcp://*:5555");
+    }
+
+    // #[test]
+    // fn test_run() {
+    //     // TODO: Mock zmq context/socket, test run logic
+    // }
 } 

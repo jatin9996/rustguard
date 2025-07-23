@@ -15,4 +15,17 @@ impl Config {
             fallback_mode: false,
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_load() {
+        let config = Config::load();
+        assert_eq!(config.icap_server_addr, "127.0.0.1:1344");
+        assert_eq!(config.listen_addr, "0.0.0.0:8080");
+        assert!(!config.fallback_mode);
+    }
 } 

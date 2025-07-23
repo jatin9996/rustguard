@@ -34,4 +34,36 @@ pub fn generate_random_id(len: usize) -> String {
         .take(len)
         .map(char::from)
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_ip() {
+        assert!(is_valid_ip("127.0.0.1"));
+        assert!(!is_valid_ip("not.an.ip"));
+    }
+
+    #[test]
+    fn test_is_valid_port() {
+        assert!(is_valid_port(80));
+        assert!(!is_valid_port(0));
+        assert!(!is_valid_port(70000));
+    }
+
+    #[test]
+    fn test_parse_host_port() {
+        let addr = parse_host_port("127.0.0.1:8080");
+        assert!(addr.is_some());
+        let addr = parse_host_port("bad:address");
+        assert!(addr.is_none());
+    }
+
+    #[test]
+    fn test_generate_random_id() {
+        let id = generate_random_id(10);
+        assert_eq!(id.len(), 10);
+    }
 } 

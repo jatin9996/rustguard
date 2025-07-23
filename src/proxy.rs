@@ -148,3 +148,70 @@ impl Clone for IcapClient {
         IcapClient::new(self.server_addr.clone(), self.timeout_ms)
     }
 } 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use tokio::io::{DuplexStream, duplex};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_proxy_new() {
+        let config = Config {
+            icap_server_addr: "127.0.0.1:1344".to_string(),
+            listen_addr: "0.0.0.0:8080".to_string(),
+            fallback_mode: false,
+        };
+        let proxy = Proxy::new(&config);
+        assert_eq!(proxy.icap_client.server_addr, "127.0.0.1:1344");
+    }
+
+    #[async_trait::async_trait]
+    pub trait IcapClientTrait: Send + Sync {
+        async fn reqmod(&self, data: &[u8]) -> Result<Vec<u8>, String>;
+    }
+
+    #[async_trait::async_trait]
+    impl IcapClientTrait for IcapClient {
+        async fn reqmod(&self, data: &[u8]) -> Result<Vec<u8>, String> {
+            self.reqmod(data).await
+        }
+    }
+
+    struct MockIcapClient;
+
+    #[async_trait::async_trait]
+    impl IcapClientTrait for MockIcapClient {
+        async fn reqmod(&self, data: &[u8]) -> Result<Vec<u8>, String> {
+            // Just echo back the data for testing
+            Ok(data.to_vec())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_handle_client() {
+        // Create in-memory duplex streams for client <-> proxy
+        let (mut client_stream, proxy_stream) = duplex(8192);
+
+        // Write a simple HTTP request to the client side
+        let request = b"GET / HTTP/1.1\r\nHost: example.com\r\n\r\n";
+        client_stream.write_all(request).await.unwrap();
+
+        // Use the mock ICAP client
+        let icap_client = Arc::new(MockIcapClient);
+
+        // Spawn the proxy handler
+        let handle = tokio::spawn(async move {
+            handle_client(proxy_stream, icap_client).await;
+        });
+
+        // Read the response from the client side
+        let mut response = Vec::new();
+        client_stream.read_to_end(&mut response).await.unwrap();
+
+        // Assert something about the response
+        assert!(response.starts_with(b"HTTP/1.1"));
+        handle.await.unwrap();
+    }
+} 
